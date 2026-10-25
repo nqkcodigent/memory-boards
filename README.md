@@ -1,6 +1,6 @@
 # memory-board
 
-Bảng kỷ niệm: ghim ảnh từ Immich lên bảng bần, nối bằng dây. Ảnh gốc nằm trên Immich; app chỉ lưu vị trí, dây và chú thích trong SQLite trên máy.
+Bảng kỷ niệm: ghim ảnh lên bảng bần, nối bằng dây. Ảnh chọn từ thư viện ảnh của điện thoại; app giữ một bản thu nhỏ (~600px) cùng vị trí, dây và chú thích trong SQLite trên máy. Không cần server, chạy offline.
 
 ## Chạy
 
@@ -9,16 +9,16 @@ npm install
 npx expo start
 ```
 
-Quét QR bằng Expo Go trên điện thoại (cùng mạng Wi‑Fi với máy tính).
-
-Vào **Immich** (góc phải màn hình đầu) → nhập địa chỉ server và API key → **Lưu và kiểm tra**.
+Mở bằng Expo Go trên điện thoại (cùng Wi‑Fi với máy tính). Trên iPhone, Expo Go và Expo CLI phải đăng nhập cùng một tài khoản Expo.
 
 ## Cách dùng bảng
 
-- **＋ Ghim ảnh**: chọn ảnh mới nhất trên Immich để ghim.
+- **＋ Ghim ảnh**: chọn tối đa 20 ảnh một lần. Ảnh có ngày chụp sẽ tự nối dây với kỷ niệm ngay trước nó.
 - **Nhấn giữ** ảnh rồi kéo để di chuyển; dây chạy theo.
-- **〰 Nối dây**: chạm hai ảnh để nối.
-- Nhấn giữ một bảng ở màn hình đầu để xoá.
+- **Chạm** ảnh để ghi chú.
+- **Nối dây**: chạm hai ảnh để nối; chạm lại hai ảnh đã nối để gỡ.
+- **Dòng thời gian**: ảnh tự xếp theo ngày chụp.
+- Nhấn giữ một bảng ở màn hình đầu để xoá (ảnh gốc trong thư viện không bị xoá).
 
 ## Kiểm tra
 
@@ -31,10 +31,12 @@ npm test
 
 - `src/app/`: các màn hình (expo-router)
 - `src/db/schema.ts`: bảng SQLite `boards`, `memories`, `connections` và các câu truy vấn
-- `src/services/immich.ts`: gọi Immich API, API key cất trong expo-secure-store
+- `src/services/photos.ts`: chọn ảnh, thu nhỏ, lưu và xoá file ảnh trong máy
 - `src/components/`: `PhotoCard` (ảnh Polaroid kéo được), `Rope` (dây SVG)
-- `src/lib/rope.ts`: tính đường cong võng của dây
+- `src/lib/`: đường cong dây, bố cục dòng thời gian, đọc ngày EXIF, bảng màu
+- `demo/board.html`: bản demo giao diện chạy trên trình duyệt
+- `server/`: hướng dẫn dựng Immich trên Oracle Cloud (chưa dùng, giữ lại nếu sau này muốn có server)
 
 ## Lưu ý
 
-- Bản build Android (không phải Expo Go) mặc định chặn `http://`. Hãy dùng HTTPS, ví dụ Tailscale Serve hoặc Cloudflare Tunnel, hoặc bật `usesCleartextTraffic` qua `expo-build-properties`.
+- Dữ liệu chỉ nằm trên điện thoại. Đổi máy hoặc xoá app thì mất bảng (ảnh gốc vẫn còn trong thư viện).

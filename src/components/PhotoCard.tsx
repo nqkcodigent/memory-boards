@@ -7,12 +7,11 @@ import { scheduleOnRN } from 'react-native-worklets';
 import type { Memory } from '@/db/schema';
 import { CARD_H, CARD_W } from '@/lib/rope';
 import { colors, handFont } from '@/lib/theme';
-import { thumbnailSource, type ImmichConfig } from '@/services/immich';
+import { photoUri } from '@/services/photos';
 import type { Positions } from './Rope';
 
 type Props = {
   memory: Memory;
-  config: ImmichConfig;
   positions: SharedValue<Positions>;
   selected: boolean;
   draggable: boolean;
@@ -22,7 +21,7 @@ type Props = {
 
 const fmtDate = (iso: string) => iso.slice(0, 10).split('-').reverse().join('.');
 
-export function PhotoCard({ memory, config, positions, selected, draggable, onTap, onMoved }: Props) {
+export function PhotoCard({ memory, positions, selected, draggable, onTap, onMoved }: Props) {
   const id = memory.id;
   const rotation = draggable ? memory.rotation : 0;
 
@@ -61,7 +60,7 @@ export function PhotoCard({ memory, config, positions, selected, draggable, onTa
         accessibilityLabel={[memory.caption, meta].filter(Boolean).join(', ') || 'Ảnh kỷ niệm'}
       >
         <View style={styles.pin} />
-        <Image source={thumbnailSource(config, memory.asset_id)} style={styles.photo} contentFit="cover" />
+        <Image source={photoUri(memory.asset_id)} style={styles.photo} contentFit="cover" />
         <Text style={styles.date} numberOfLines={1}>{meta}</Text>
         <Text style={[styles.caption, !memory.caption && styles.placeholder]} numberOfLines={1}>
           {memory.caption || 'Chạm để ghi chú'}

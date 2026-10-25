@@ -23,7 +23,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font"
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Cho phép Bảng Kỷ Niệm chọn ảnh để ghim lên bảng.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ],
     "scheme": "memoryboard"
   }

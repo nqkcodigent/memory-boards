@@ -25,7 +25,6 @@ export default function RootLayout() {
           }}
         >
           <Stack.Screen name="index" options={{ title: 'Bảng Kỷ Niệm' }} />
-          <Stack.Screen name="settings" options={{ title: 'Kết nối Immich' }} />
           <Stack.Screen name="board/[id]" options={{ title: '' }} />
         </Stack>
       </SQLiteProvider>

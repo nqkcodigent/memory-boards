@@ -2,7 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 export type Board = { id: number; name: string; created_at: string };
 
-// Ảnh gốc nằm trên Immich; app chỉ lưu asset_id và vị trí trên bảng.
+// asset_id là tên file ảnh thu nhỏ trong thư mục app (xem services/photos.ts); ảnh gốc ở lại thư viện ảnh.
 export type Memory = {
   id: number;
   board_id: number;

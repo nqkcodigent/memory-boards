@@ -1,10 +1,11 @@
-import { Link, Stack, useFocusEffect } from 'expo-router';
+import { Link, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { createBoard, deleteBoard, listBoards, listMemories, type Board } from '@/db/schema';
 import { colors, handFont } from '@/lib/theme';
-import { createBoard, deleteBoard, listBoards, type Board } from '@/db/schema';
+import { deletePhotos } from '@/services/photos';
 
 export default function BoardsScreen() {
   const db = useSQLiteContext();
@@ -23,22 +24,22 @@ export default function BoardsScreen() {
     reload();
   }
 
+  async function remove(b: Board) {
+    const files = (await listMemories(db, b.id)).map((m) => m.asset_id);
+    await deleteBoard(db, b.id);
+    deletePhotos(files);
+    reload();
+  }
+
   function confirmDelete(b: Board) {
-    Alert.alert('Xoá bảng?', `"${b.name}" và mọi ảnh ghim trên đó sẽ bị xoá khỏi app (ảnh gốc trên Immich vẫn còn).`, [
+    Alert.alert('Xoá bảng?', `"${b.name}" và mọi ảnh ghim trên đó sẽ bị xoá khỏi app (ảnh gốc trong thư viện ảnh vẫn còn).`, [
       { text: 'Huỷ', style: 'cancel' },
-      { text: 'Xoá', style: 'destructive', onPress: () => deleteBoard(db, b.id).then(reload) },
+      { text: 'Xoá', style: 'destructive', onPress: () => remove(b) },
     ]);
   }
 
   return (
     <View style={styles.screen}>
-      <Stack.Screen
-        options={{
-          headerRight: () => (
-            <Link href="/settings" style={styles.link}>Immich</Link>
-          ),
-        }}
-      />
       <View style={styles.row}>
         <TextInput
           style={styles.input}
@@ -78,5 +79,4 @@ const styles = StyleSheet.create({
   itemTitle: { fontSize: 22, fontFamily: handFont, color: colors.ink },
   itemDate: { color: colors.inkDim, marginTop: 4 },
   empty: { textAlign: 'center', color: colors.chalkDim, marginTop: 32 },
-  link: { color: colors.jute, fontWeight: '600', padding: 8 },
 });

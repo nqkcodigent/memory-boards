@@ -1,9 +1,8 @@
-import { Image } from 'expo-image';
-import { Link, Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, ImageBackground, Modal, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View,
+  ActivityIndicator, ImageBackground, Modal, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSharedValue } from 'react-native-reanimated';
@@ -17,7 +16,7 @@ import {
 } from '@/db/schema';
 import { timelineLayout } from '@/lib/rope';
 import { colors, handFont } from '@/lib/theme';
-import { loadConfig, recentAssets, thumbnailSource, type ImmichAsset, type ImmichConfig } from '@/services/immich';
+import { pickPhotos } from '@/services/photos';
 
 // shortcut: bảng cố định 2000×2000 và chỉ cuộn, chưa có pinch-zoom; thêm zoom khi bảng đông ảnh.
 const BOARD_SIZE = 2000;
@@ -33,7 +32,6 @@ export default function BoardScreen() {
   const { width } = useWindowDimensions();
 
   const [board, setBoard] = useState<Board | null>(null);
-  const [config, setConfig] = useState<ImmichConfig | null | undefined>(undefined);
   const [memories, setMemories] = useState<Memory[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const positions = useSharedValue<Positions>({});
@@ -41,7 +39,7 @@ export default function BoardScreen() {
   const [view, setView] = useState<View_>('board');
   const [connecting, setConnecting] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pinning, setPinning] = useState(false);
   const [editing, setEditing] = useState<Memory | null>(null);
   const scroll = useRef({ x: 0, y: 0 });
 
@@ -62,7 +60,6 @@ export default function BoardScreen() {
 
   useEffect(() => {
     getBoard(db, boardId).then(setBoard);
-    loadConfig().then(setConfig);
     reload();
   }, [db, boardId, reload]);
 
@@ -94,23 +91,33 @@ export default function BoardScreen() {
     setSelected(null);
   }
 
-  async function pin(asset: ImmichAsset) {
-    setPickerOpen(false);
-    switchView('board');
-    const r = await addMemory(db, {
-      board_id: boardId,
-      asset_id: asset.id,
-      taken_at: asset.localDateTime,
-      place: asset.exifInfo?.city ?? null,
-      // Đặt gần chỗ đang xem, lệch ngẫu nhiên và nghiêng ±3° cho giống ảnh ghim tay.
-      x: scroll.current.x + 40 + Math.random() * 120,
-      y: scroll.current.y + 60 + Math.random() * 120,
-      rotation: Math.random() * 6 - 3,
-    });
-    // Như demo: tự nối với kỷ niệm ngay trước nó theo ngày.
-    const prev = byDate.filter((m) => (m.taken_at ?? '') < asset.localDateTime).pop();
-    if (prev) await addConnection(db, boardId, prev.id, r.lastInsertRowId, 'auto');
-    await reload();
+  async function pin() {
+    setPinning(true);
+    try {
+      const photos = await pickPhotos();
+      if (photos.length) switchView('board');
+      const pinned = [...byDate];
+      for (const [i, p] of photos.entries()) {
+        const r = await addMemory(db, {
+          board_id: boardId,
+          asset_id: p.file,
+          taken_at: p.takenAt,
+          place: null,
+          // Đặt gần chỗ đang xem, xếp lệch nhau và nghiêng ±3° cho giống ảnh ghim tay.
+          x: scroll.current.x + 30 + (i % 3) * 160 + Math.random() * 30,
+          y: scroll.current.y + 40 + Math.floor(i / 3) * 200 + Math.random() * 30,
+          rotation: Math.random() * 6 - 3,
+        });
+        // Như demo: tự nối với kỷ niệm ngay trước nó theo ngày (ảnh không có ngày thì để người dùng tự nối).
+        const prev = p.takenAt ? pinned.filter((m) => m.taken_at && m.taken_at < p.takenAt!).pop() : undefined;
+        if (prev) await addConnection(db, boardId, prev.id, r.lastInsertRowId, 'auto');
+        pinned.push({ id: r.lastInsertRowId, taken_at: p.takenAt } as Memory);
+        pinned.sort((a, b) => (a.taken_at ?? '').localeCompare(b.taken_at ?? ''));
+      }
+      await reload();
+    } finally {
+      setPinning(false);
+    }
   }
 
   async function saveCaption(text: string) {
@@ -118,16 +125,6 @@ export default function BoardScreen() {
     await updateCaption(db, editing.id, text);
     setEditing(null);
     await reload();
-  }
-
-  if (config === undefined) return <ActivityIndicator style={styles.loading} color={colors.chalk} />;
-  if (config === null) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.hint}>Chưa kết nối Immich.</Text>
-        <Link href="/settings" style={styles.link}>Mở cài đặt</Link>
-      </View>
-    );
   }
 
   const span = byDate.length && byDate[0].taken_at
@@ -178,7 +175,6 @@ export default function BoardScreen() {
                 <PhotoCard
                   key={m.id}
                   memory={m}
-                  config={config}
                   positions={positions}
                   selected={selected === m.id}
                   draggable={view === 'board'}
@@ -192,8 +188,8 @@ export default function BoardScreen() {
       </View>
 
       <View style={styles.toolbar}>
-        <Pressable style={[styles.tool, styles.toolPrimary]} onPress={() => setPickerOpen(true)} accessibilityRole="button">
-          <Text style={styles.toolTextDark}>＋ Ghim ảnh</Text>
+        <Pressable style={[styles.tool, styles.toolPrimary]} onPress={pin} disabled={pinning} accessibilityRole="button">
+          {pinning ? <ActivityIndicator color={colors.ink} /> : <Text style={styles.toolTextDark}>＋ Ghim ảnh</Text>}
         </Pressable>
         {view === 'board' && (
           <Pressable
@@ -207,7 +203,6 @@ export default function BoardScreen() {
         )}
       </View>
 
-      <AssetPicker config={config} visible={pickerOpen} onClose={() => setPickerOpen(false)} onPick={pin} />
       <CaptionEditor memory={editing} onClose={() => setEditing(null)} onSave={saveCaption} />
     </View>
   );
@@ -246,64 +241,8 @@ function CaptionEditor({ memory, onClose, onSave }: {
   );
 }
 
-function AssetPicker({ config, visible, onClose, onPick }: {
-  config: ImmichConfig;
-  visible: boolean;
-  onClose: () => void;
-  onPick: (a: ImmichAsset) => void;
-}) {
-  const [assets, setAssets] = useState<ImmichAsset[]>([]);
-  const [page, setPage] = useState<number | null>(1);
-  const [error, setError] = useState<string | null>(null);
-  const loading = useRef(false);
-
-  const loadMore = useCallback(async () => {
-    if (page === null || loading.current) return;
-    loading.current = true;
-    try {
-      const r = await recentAssets(config, page);
-      setAssets((prev) => [...prev, ...r.items]);
-      setPage(r.nextPage ? Number(r.nextPage) : null);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      loading.current = false;
-    }
-  }, [config, page]);
-
-  useEffect(() => {
-    if (visible && assets.length === 0) loadMore();
-  }, [visible, assets.length, loadMore]);
-
-  return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={styles.pickerScreen}>
-        <View style={styles.pickerHeader}>
-          <Text style={styles.pickerTitle}>Chọn ảnh từ Immich</Text>
-          <Pressable onPress={onClose} accessibilityRole="button"><Text style={styles.link}>Đóng</Text></Pressable>
-        </View>
-        {error && <Text style={styles.error}>{error}</Text>}
-        <FlatList
-          data={assets}
-          numColumns={3}
-          keyExtractor={(a) => a.id}
-          onEndReached={loadMore}
-          renderItem={({ item }) => (
-            <Pressable style={styles.thumbWrap} onPress={() => onPick(item)} accessibilityLabel={item.originalFileName}>
-              <Image source={thumbnailSource(config, item.id)} style={styles.thumb} contentFit="cover" />
-              {item.type === 'VIDEO' && <Text style={styles.video}>▶</Text>}
-            </Pressable>
-          )}
-        />
-      </View>
-    </Modal>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.wall },
-  loading: { flex: 1, backgroundColor: colors.wall },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.wall },
   top: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10, gap: 8 },
   summary: { color: colors.chalkDim, fontSize: 13 },
   hint: { color: colors.chalkDim, fontSize: 13 },
@@ -325,11 +264,4 @@ const styles = StyleSheet.create({
   sheetTitle: { fontFamily: handFont, fontSize: 24, color: colors.ink },
   captionInput: { fontFamily: handFont, fontSize: 20, color: colors.ink, borderBottomWidth: 1, borderColor: colors.inkDim, minHeight: 44 },
   sheetActions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 8 },
-  pickerScreen: { flex: 1, backgroundColor: colors.wall },
-  pickerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 48 },
-  pickerTitle: { fontSize: 22, fontFamily: handFont, color: colors.chalk },
-  error: { color: '#ff9a8f', padding: 16 },
-  thumbWrap: { flex: 1 / 3, aspectRatio: 1, padding: 1 },
-  thumb: { flex: 1, backgroundColor: colors.wall2 },
-  video: { position: 'absolute', right: 6, bottom: 4, color: '#fff', fontSize: 16 },
 });
