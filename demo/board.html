@@ -1,0 +1,446 @@
+<title>Bảng Kỷ Niệm</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Patrick+Hand&display=swap">
+<style>
+/* Bố cục: một thanh công cụ gỗ tối phía trên, bên dưới là tấm bảng bần đóng khung, cuộn trong khung riêng. */
+/* Giao diện cố ý chỉ có một kiểu (tường gỗ tối + bảng bần), không đổi theo chế độ sáng/tối. */
+:root {
+  --wall: #2b2019;
+  --wall-2: #3a2b20;
+  --chalk: #f3e6d3;
+  --chalk-dim: #c7b29a;
+  --frame: #6b4a2b;
+  --cork: #b98a55;
+  --paper: #fbf7ee;
+  --ink: #3a2a1c;
+  --ink-dim: #8a7058;
+  --jute: #d2ad72;
+  --jute-dark: #8f6a3a;
+  --yarn: #b6403a;
+  --pin: #c23b2f;
+  --focus: #ffd58a;
+  --font-ui: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --font-hand: "Patrick Hand", "Comic Sans MS", "Segoe Print", cursive;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--wall);
+  color: var(--chalk);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  display: flex;
+  flex-direction: column;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 14px;
+  gap: 12px;
+  box-sizing: border-box;
+}
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.title { display: flex; flex-direction: column; gap: 2px; min-width: 0; margin-right: auto; }
+.title h1 { margin: 0; font-family: var(--font-hand); font-weight: 400; font-size: 30px; line-height: 1; letter-spacing: .5px; text-wrap: balance; }
+.title p { margin: 0; color: var(--chalk-dim); font-size: 13px; font-variant-numeric: tabular-nums; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; background: var(--wall-2); border-radius: 999px; padding: 3px; }
+.seg button { background: transparent; color: var(--chalk-dim); }
+.seg button[aria-pressed="true"] { background: var(--chalk); color: var(--ink); }
+button {
+  font: 500 14px/1 var(--font-ui);
+  border: 0; border-radius: 999px; padding: 10px 14px; min-height: 38px;
+  background: var(--wall-2); color: var(--chalk); cursor: pointer;
+}
+button:hover { filter: brightness(1.15); }
+button:focus-visible, .card:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+button.primary { background: var(--jute); color: var(--ink); }
+button.active { background: var(--yarn); color: var(--paper); }
+button:disabled { opacity: .4; cursor: default; filter: none; }
+.hint { margin: 0; font-size: 13px; color: var(--chalk-dim); min-height: 1.3em; }
+.hint b { color: var(--chalk); font-weight: 600; }
+
+.frame {
+  flex: 1; min-height: 320px;
+  border: 12px solid var(--frame);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.45);
+  background-color: var(--cork);
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' seed='4'/><feColorMatrix values='0 0 0 0 .33  0 0 0 0 .2  0 0 0 0 .08  0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    radial-gradient(circle at 30% 20%, rgba(255,230,190,.25), transparent 60%);
+  overflow: auto;
+  position: relative;
+}
+.board { position: relative; }
+.ropes { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+.ropes .hit { pointer-events: none; cursor: pointer; }
+.connecting .ropes .hit { pointer-events: stroke; }
+.connecting .ropes g:hover .main { stroke: var(--focus); }
+
+.card {
+  position: absolute; left: 0; top: 0;
+  width: 140px; height: 178px; box-sizing: border-box;
+  padding: 8px 8px 0;
+  background: var(--paper);
+  border-radius: 2px;
+  box-shadow: 0 3px 6px rgba(40,25,10,.35), 0 1px 1px rgba(40,25,10,.3);
+  touch-action: none; user-select: none; -webkit-user-select: none;
+  cursor: grab;
+  will-change: transform;
+}
+.timeline .card { cursor: default; }
+.card.lifted { cursor: grabbing; box-shadow: 0 14px 24px rgba(40,25,10,.45); }
+.card.selected { box-shadow: 0 0 0 3px var(--yarn), 0 8px 18px rgba(40,25,10,.4); }
+.card img { display: block; width: 124px; height: 124px; object-fit: cover; background: #e8e0d0; pointer-events: none; }
+.card .pin {
+  position: absolute; top: 3px; left: 63px; width: 14px; height: 14px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f07a6c, var(--pin) 55%, #7d1f17);
+  box-shadow: 1px 2px 2px rgba(0,0,0,.4); z-index: 1;
+}
+.card .date { margin: 3px 0 0; font: 13px/1 var(--font-hand); color: var(--ink-dim); text-align: center; font-variant-numeric: tabular-nums; }
+.card .cap { margin: 2px 0 0; font: 17px/1.05 var(--font-hand); color: var(--ink); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@keyframes drop { from { opacity: 0; translate: 0 -40px; scale: 1.15; } to { opacity: 1; translate: 0 0; scale: 1; } }
+.card.dropped { animation: drop .35s cubic-bezier(.2,.9,.3,1.2); }
+
+.foot { margin: 0; font-size: 12px; color: var(--chalk-dim); }
+@media (prefers-reduced-motion: reduce) { .card.dropped { animation: none; } }
+@media (max-width: 520px) { .title h1 { font-size: 26px; } button { padding: 9px 12px; } }
+</style>
+
+<header class="bar">
+  <div class="title">
+    <h1>Bảng Kỷ Niệm</h1>
+    <p id="summary"></p>
+  </div>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Chế độ xem">
+      <button id="view-board" type="button" aria-pressed="true">Bảng</button>
+      <button id="view-timeline" type="button" aria-pressed="false">Dòng thời gian</button>
+    </div>
+    <button id="add" type="button" class="primary">＋ Ghim ảnh</button>
+    <button id="connect" type="button" aria-pressed="false">Nối dây</button>
+    <button id="reset" type="button">Đặt lại</button>
+  </div>
+</header>
+<p class="hint" id="hint" aria-live="polite"></p>
+<main class="frame" id="frame">
+  <div class="board" id="board">
+    <svg class="ropes" id="ropes" aria-hidden="true"></svg>
+  </div>
+</main>
+<p class="foot">Bản demo dùng ảnh vẽ sẵn. Trong app thật, ảnh lấy từ Immich. Vị trí ảnh chỉ lưu trong trình duyệt này.</p>
+
+<script>
+// Cùng số đo và công thức với src/lib/rope.ts của app.
+const CARD_W = 140, CARD_H = 178, PIN_Y = 10, BOARD_W = 1400, BOARD_H = 820;
+function ropePath(a, b) {
+  const x1 = a.x + CARD_W / 2, y1 = a.y + PIN_Y, x2 = b.x + CARD_W / 2, y2 = b.y + PIN_Y;
+  const sag = Math.min(90, 12 + Math.hypot(x2 - x1, y2 - y1) * 0.2);
+  return `M ${x1} ${y1} Q ${(x1 + x2) / 2} ${(y1 + y2) / 2 + sag} ${x2} ${y2}`;
+}
+
+// ---- Ảnh mẫu vẽ bằng canvas ----
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function sky(g, a, b) { const s = g.createLinearGradient(0, 0, 0, 248); s.addColorStop(0, a); s.addColorStop(1, b); g.fillStyle = s; g.fillRect(0, 0, 248, 248); }
+function hills(g, y, amp, color, r) { g.fillStyle = color; g.beginPath(); g.moveTo(0, 248); for (let x = 0; x <= 248; x += 8) g.lineTo(x, y + Math.sin(x / 30 + r * 6) * amp + Math.sin(x / 11 + r) * amp * .3); g.lineTo(248, 248); g.fill(); }
+const PAINTERS = {
+  city(g, r) {
+    sky(g, '#1b2440', '#5a4170');
+    g.fillStyle = '#f6eccb'; g.beginPath(); g.arc(190, 50, 16, 0, 7); g.fill();
+    for (let x = 0; x < 248; x += 26) {
+      const h = 70 + r() * 110; g.fillStyle = '#141826'; g.fillRect(x, 248 - h, 24, h);
+      for (let wy = 248 - h + 8; wy < 240; wy += 12) for (let wx = x + 4; wx < x + 20; wx += 8) if (r() > .55) { g.fillStyle = '#ffd27a'; g.fillRect(wx, wy, 4, 5); }
+    }
+  },
+  sea(g, r) {
+    sky(g, '#8fcbe0', '#f7e2b8');
+    g.fillStyle = '#ffd88a'; g.beginPath(); g.arc(70, 120, 26, 0, 7); g.fill();
+    g.fillStyle = '#2f7fa0'; g.fillRect(0, 140, 248, 70);
+    g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 2;
+    for (let i = 0; i < 9; i++) { const y = 150 + i * 6; g.beginPath(); g.moveTo(r() * 120, y); g.lineTo(80 + r() * 160, y); g.stroke(); }
+    g.fillStyle = '#e9cf9c'; g.beginPath(); g.moveTo(0, 248); g.lineTo(0, 205); g.quadraticCurveTo(140, 190, 248, 215); g.lineTo(248, 248); g.fill();
+  },
+  party(g, r) {
+    sky(g, '#f6d6cc', '#efb9a8');
+    ['#e2574c', '#f3b33d', '#5aa0c8', '#8cc56a', '#c77dba'].forEach((c, i) => {
+      const x = 30 + i * 46 + r() * 10, y = 50 + r() * 40;
+      g.strokeStyle = 'rgba(80,50,40,.5)'; g.beginPath(); g.moveTo(x, y + 26); g.lineTo(x + 4, y + 90); g.stroke();
+      g.fillStyle = c; g.beginPath(); g.ellipse(x, y, 20, 26, 0, 0, 7); g.fill();
+    });
+    g.fillStyle = '#fff4e6'; g.fillRect(64, 170, 120, 56); g.fillStyle = '#e88aa0'; g.fillRect(64, 170, 120, 12);
+    for (let i = 0; i < 5; i++) { g.fillStyle = '#f5f0d8'; g.fillRect(80 + i * 22, 150, 5, 20); g.fillStyle = '#ffb347'; g.beginPath(); g.ellipse(82.5 + i * 22, 145, 3, 6, 0, 0, 7); g.fill(); }
+  },
+  fog(g, r) {
+    sky(g, '#d5dde0', '#f1f3f1');
+    hills(g, 120, 22, '#8fa59a', r()); hills(g, 150, 18, '#6b8a78', r());
+    g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(0, 160, 248, 22);
+    hills(g, 190, 14, '#3f5f4c', r());
+    for (let i = 0; i < 7; i++) { const x = 20 + i * 32 + r() * 10; g.fillStyle = '#2c4636'; g.beginPath(); g.moveTo(x, 236); g.lineTo(x + 9, 190 + r() * 10); g.lineTo(x + 18, 236); g.fill(); }
+  },
+  xmas(g, r) {
+    sky(g, '#1d3b2a', '#0f2419');
+    for (let row = 0; row < 3; row++) for (let x = 0; x < 248; x += 18) {
+      const y = 50 + row * 60 + Math.sin(x / 40 + row) * 14;
+      g.fillStyle = ['#ffd27a', '#ff7a6b', '#9fe0ff', '#c6ff8a'][(x / 18 + row) % 4 | 0];
+      g.shadowColor = g.fillStyle; g.shadowBlur = 10; g.beginPath(); g.arc(x, y, 4, 0, 7); g.fill();
+    }
+    g.shadowBlur = 0; g.fillStyle = 'rgba(255,255,255,.8)';
+    for (let i = 0; i < 40; i++) { g.beginPath(); g.arc(r() * 248, r() * 248, r() * 1.8, 0, 7); g.fill(); }
+  },
+  tea(g, r) {
+    sky(g, '#d9eef6', '#f4f8ec');
+    hills(g, 110, 16, '#a9cf7c', r()); hills(g, 150, 20, '#7fb35a', r()); hills(g, 195, 16, '#5a9443', r());
+    g.strokeStyle = 'rgba(40,80,30,.35)'; g.lineWidth = 3;
+    for (let y = 120; y < 248; y += 14) { g.beginPath(); for (let x = 0; x <= 248; x += 8) g.lineTo(x, y + Math.sin(x / 28 + y) * 6); g.stroke(); }
+  },
+  lantern(g, r) {
+    sky(g, '#f0a35e', '#6e3756');
+    g.fillStyle = '#3b2340'; g.fillRect(0, 190, 248, 58);
+    g.strokeStyle = 'rgba(40,20,20,.6)'; g.beginPath(); g.moveTo(0, 40); g.quadraticCurveTo(124, 80, 248, 40); g.stroke();
+    for (let i = 0; i < 6; i++) {
+      const x = 20 + i * 42, y = 50 + Math.sin(i / 5 * Math.PI) * 22;
+      g.fillStyle = i % 2 ? '#ffcf5a' : '#e2483d'; g.shadowColor = g.fillStyle; g.shadowBlur = 18;
+      g.beginPath(); g.ellipse(x, y + 18, 13, 17, 0, 0, 7); g.fill(); g.shadowBlur = 0;
+      g.fillStyle = 'rgba(255,220,140,.35)'; g.fillRect(x - 3, 200 + r() * 10, 6, 30);
+    }
+  },
+  coffee(g, r) {
+    sky(g, '#ead9c4', '#cdb293');
+    g.fillStyle = 'rgba(90,60,35,.15)'; for (let y = 0; y < 248; y += 20) g.fillRect(0, y, 248, 2);
+    g.fillStyle = '#f7f1e8'; g.beginPath(); g.ellipse(124, 140, 80, 62, 0, 0, 7); g.fill();
+    g.fillStyle = '#ffffff'; g.beginPath(); g.arc(124, 130, 48, 0, 7); g.fill();
+    g.fillStyle = '#6b4022'; g.beginPath(); g.arc(124, 130, 38, 0, 7); g.fill();
+    g.strokeStyle = '#f2dcc2'; g.lineWidth = 3; g.beginPath(); g.arc(124, 130, 16, 0, 5); g.stroke();
+    g.strokeStyle = '#ffffff'; g.lineWidth = 9; g.beginPath(); g.arc(178, 128, 13, -1.2, 1.2); g.stroke();
+  },
+};
+const photoCache = {};
+function photo(kind, seed) {
+  const key = kind + seed;
+  if (!photoCache[key]) {
+    const c = document.createElement('canvas'); c.width = c.height = 248;
+    const g = c.getContext('2d'); PAINTERS[kind](g, rng(seed));
+    const v = g.createRadialGradient(124, 124, 70, 124, 124, 180); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(30,15,0,.35)');
+    g.fillStyle = v; g.fillRect(0, 0, 248, 248);
+    photoCache[key] = c.toDataURL('image/jpeg', .85);
+  }
+  return photoCache[key];
+}
+
+// ---- Dữ liệu mẫu (cùng dạng với bảng memories/connections trong SQLite) ----
+const SEED = [
+  { id: 1, kind: 'city', date: '2025-02-14', caption: 'Hẹn hò đầu tiên', place: 'Hà Nội', x: 60, y: 70 },
+  { id: 2, kind: 'sea', date: '2025-04-30', caption: 'Biển Quy Nhơn', place: 'Quy Nhơn', x: 290, y: 220 },
+  { id: 3, kind: 'party', date: '2025-07-12', caption: 'Sinh nhật cả nhóm', place: 'Sài Gòn', x: 530, y: 80 },
+  { id: 4, kind: 'fog', date: '2025-10-03', caption: 'Săn mây Đà Lạt', place: 'Đà Lạt', x: 770, y: 250 },
+  { id: 5, kind: 'xmas', date: '2025-12-24', caption: 'Đêm Giáng sinh', place: 'Hà Nội', x: 1010, y: 100 },
+  { id: 6, kind: 'tea', date: '2026-03-08', caption: 'Đồi chè Mộc Châu', place: 'Mộc Châu', x: 1110, y: 450 },
+];
+const EXTRA = [
+  { kind: 'lantern', date: '2026-06-20', caption: 'Đèn lồng Hội An', place: 'Hội An' },
+  { kind: 'coffee', date: '2026-08-02', caption: 'Cà phê sáng chủ nhật', place: 'Đà Nẵng' },
+];
+const KEY = 'memory-board-demo-v1';
+function seedState() {
+  const memories = SEED.map((m) => ({ ...m, rot: ((m.id * 37) % 7) - 3 }));
+  const conns = memories.slice(1).map((m, i) => ({ a: memories[i].id, b: m.id, kind: 'auto' }));
+  return { memories, conns, nextId: 7, extraUsed: 0 };
+}
+let state;
+try { state = JSON.parse(localStorage.getItem(KEY)) || seedState(); } catch { state = seedState(); }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }
+
+// ---- Hiển thị ----
+const frame = document.getElementById('frame');
+const board = document.getElementById('board');
+const ropesSvg = document.getElementById('ropes');
+const hint = document.getElementById('hint');
+const els = new Map();
+let view = 'board', connecting = false, selected = null, shown = {}, topZ = 10;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const fmtDate = (d) => d.split('-').reverse().join('.');
+const byDate = () => [...state.memories].sort((a, b) => a.date.localeCompare(b.date));
+
+function timelineLayout() {
+  const w = frame.clientWidth, list = byDate(), pos = {};
+  const twoCols = w >= 360, c = w / 2;
+  list.forEach((m, i) => {
+    pos[m.id] = twoCols
+      ? { x: i % 2 ? c + 14 : c - CARD_W - 14, y: 30 + i * 130 }
+      : { x: c - CARD_W / 2, y: 30 + i * 210 };
+  });
+  const last = pos[list[list.length - 1]?.id] || { y: 0 };
+  return { pos, w, h: last.y + CARD_H + 50 };
+}
+function targetPositions() {
+  if (view === 'board') return { pos: Object.fromEntries(state.memories.map((m) => [m.id, { x: m.x, y: m.y }])), w: BOARD_W, h: BOARD_H };
+  return timelineLayout();
+}
+function visibleConns() {
+  if (view === 'board') return state.conns;
+  const l = byDate(); return l.slice(1).map((m, i) => ({ a: l[i].id, b: m.id, kind: 'auto' }));
+}
+
+function makeCard(m) {
+  const el = document.createElement('div');
+  el.className = 'card'; el.tabIndex = 0; el.setAttribute('role', 'button');
+  el.setAttribute('aria-label', `${m.caption}, ${m.place}, ${fmtDate(m.date)}`);
+  el.innerHTML = `<span class="pin"></span><img alt="" src="${photo(m.kind, m.id)}"><p class="date">${fmtDate(m.date)} · ${m.place}</p><p class="cap"></p>`;
+  el.querySelector('.cap').textContent = m.caption;
+  bindDrag(el, m);
+  board.appendChild(el);
+  els.set(m.id, el);
+  return el;
+}
+
+function place(id, p, rot) { const el = els.get(id); if (el) el.style.transform = `translate(${p.x}px, ${p.y}px) rotate(${rot}deg)`; }
+function drawRopes() {
+  ropesSvg.innerHTML = visibleConns().map((c, i) => {
+    const a = shown[c.a], b = shown[c.b]; if (!a || !b) return '';
+    const d = ropePath(a, b), color = c.kind === 'manual' ? 'var(--yarn)' : 'var(--jute)';
+    return `<g data-i="${i}"><path d="${d}" fill="none" stroke="rgba(30,15,5,.35)" stroke-width="4" transform="translate(1 3)"/>`
+      + `<path class="main" d="${d}" fill="none" stroke="${color}" stroke-width="3.2" stroke-linecap="round"/>`
+      + `<path d="${d}" fill="none" stroke="var(--jute-dark)" stroke-width="1.2" stroke-dasharray="2 4" opacity=".7"/>`
+      + `<path class="hit" d="${d}" fill="none" stroke="transparent" stroke-width="16"/></g>`;
+  }).join('');
+}
+function applyAll() {
+  for (const m of state.memories) if (shown[m.id]) place(m.id, shown[m.id], view === 'board' ? m.rot : 0);
+  drawRopes();
+}
+function summary() {
+  const l = byDate(), n = l.length;
+  const span = n ? `${fmtDate(l[0].date).slice(3)} – ${fmtDate(l[n - 1].date).slice(3)}` : '';
+  document.getElementById('summary').textContent = `${n} kỷ niệm · ${state.conns.length} sợi dây · ${span}`;
+  document.getElementById('add').disabled = state.extraUsed >= EXTRA.length;
+}
+function setHint() {
+  hint.innerHTML = view === 'timeline'
+    ? 'Dòng thời gian tự xếp ảnh theo ngày và nối dây từ kỷ niệm này sang kỷ niệm tiếp theo.'
+    : connecting
+      ? (selected ? '<b>Chạm ảnh thứ hai</b> để nối dây, hoặc chạm lại ảnh đầu để bỏ chọn.' : '<b>Chạm một ảnh</b> để bắt đầu nối. Chạm vào sợi dây để gỡ nó.')
+      : 'Kéo ảnh để di chuyển, dây sẽ chạy theo. Bấm <b>Nối dây</b> để nối hai ảnh.';
+}
+
+// Chuyển chế độ: nội suy vị trí để ảnh và dây cùng trượt sang chỗ mới.
+function render(animate) {
+  for (const m of state.memories) if (!els.has(m.id)) makeCard(m);
+  const t = targetPositions();
+  board.style.width = t.w + 'px'; board.style.height = t.h + 'px';
+  ropesSvg.setAttribute('width', t.w); ropesSvg.setAttribute('height', t.h);
+  frame.classList.toggle('timeline', view === 'timeline');
+  frame.classList.toggle('connecting', connecting);
+  const from = { ...shown };
+  if (!animate || reduceMotion || !Object.keys(from).length) { shown = t.pos; applyAll(); }
+  else {
+    const start = performance.now(), dur = 450;
+    const step = (now) => {
+      const k = Math.min(1, (now - start) / dur), e = 1 - Math.pow(1 - k, 3);
+      for (const id in t.pos) { const a = from[id] || t.pos[id], b = t.pos[id]; shown[id] = { x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e }; }
+      applyAll(); if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  summary(); setHint();
+}
+
+// ---- Kéo thả và nối dây ----
+function bindDrag(el, m) {
+  let start = null;
+  el.addEventListener('pointerdown', (e) => {
+    if (view !== 'board') return;
+    start = { x: e.clientX, y: e.clientY, ox: m.x, oy: m.y, moved: false };
+    el.setPointerCapture(e.pointerId); el.style.zIndex = ++topZ; el.classList.add('lifted');
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!start) return;
+    const dx = e.clientX - start.x, dy = e.clientY - start.y;
+    if (!start.moved && Math.hypot(dx, dy) < 5) return;
+    start.moved = true;
+    m.x = Math.max(0, Math.min(BOARD_W - CARD_W, start.ox + dx));
+    m.y = Math.max(0, Math.min(BOARD_H - CARD_H, start.oy + dy));
+    shown[m.id] = { x: m.x, y: m.y }; place(m.id, shown[m.id], m.rot); drawRopes();
+  });
+  const end = () => {
+    if (!start) return;
+    el.classList.remove('lifted');
+    if (start.moved) save(); else tapCard(m);
+    start = null;
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+  el.addEventListener('keydown', (e) => {
+    if (view !== 'board') return;
+    const step = e.shiftKey ? 40 : 10, d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+    if (d) {
+      e.preventDefault();
+      m.x = Math.max(0, Math.min(BOARD_W - CARD_W, m.x + d[0])); m.y = Math.max(0, Math.min(BOARD_H - CARD_H, m.y + d[1]));
+      shown[m.id] = { x: m.x, y: m.y }; place(m.id, shown[m.id], m.rot); drawRopes(); save();
+    } else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tapCard(m); }
+  });
+}
+function tapCard(m) {
+  if (!connecting) return;
+  if (selected === null) selected = m.id;
+  else if (selected === m.id) selected = null;
+  else {
+    const a = Math.min(selected, m.id), b = Math.max(selected, m.id);
+    if (!state.conns.some((c) => Math.min(c.a, c.b) === a && Math.max(c.a, c.b) === b)) state.conns.push({ a, b, kind: 'manual' });
+    selected = null; save(); drawRopes(); summary();
+  }
+  els.forEach((el, id) => el.classList.toggle('selected', id === selected));
+  setHint();
+}
+ropesSvg.addEventListener('click', (e) => {
+  const g = e.target.closest('g[data-i]'); if (!g || !connecting) return;
+  state.conns.splice(Number(g.dataset.i), 1); save(); drawRopes(); summary();
+});
+
+// ---- Thanh công cụ ----
+function setView(v) {
+  view = v; connecting = false; selected = null;
+  els.forEach((el) => el.classList.remove('selected'));
+  document.getElementById('view-board').setAttribute('aria-pressed', v === 'board');
+  document.getElementById('view-timeline').setAttribute('aria-pressed', v === 'timeline');
+  const c = document.getElementById('connect'); c.classList.remove('active'); c.setAttribute('aria-pressed', 'false');
+  c.disabled = v !== 'board';
+  frame.scrollTo({ left: 0, top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+  render(true);
+}
+document.getElementById('view-board').onclick = () => setView('board');
+document.getElementById('view-timeline').onclick = () => setView('timeline');
+document.getElementById('connect').onclick = (e) => {
+  connecting = !connecting; selected = null;
+  els.forEach((el) => el.classList.remove('selected'));
+  e.currentTarget.classList.toggle('active', connecting); e.currentTarget.setAttribute('aria-pressed', connecting);
+  frame.classList.toggle('connecting', connecting); setHint();
+};
+document.getElementById('add').onclick = () => {
+  if (state.extraUsed >= EXTRA.length) return;
+  if (view !== 'board') setView('board');
+  const x = EXTRA[state.extraUsed++], id = state.nextId++;
+  const m = {
+    id, ...x, rot: Math.round(Math.random() * 6 - 3),
+    x: Math.min(BOARD_W - CARD_W, frame.scrollLeft + frame.clientWidth / 2 - CARD_W / 2 + (Math.random() * 80 - 40)),
+    y: Math.min(BOARD_H - CARD_H, frame.scrollTop + 40 + Math.random() * 60),
+  };
+  // Giống chế độ tự động: nối với kỷ niệm ngay trước nó theo ngày.
+  const prev = byDate().filter((o) => o.date < m.date).pop();
+  state.memories.push(m);
+  if (prev) state.conns.push({ a: prev.id, b: id, kind: 'auto' });
+  save();
+  const el = makeCard(m); el.style.zIndex = ++topZ; el.classList.add('dropped');
+  shown[id] = { x: m.x, y: m.y };
+  render(false);
+};
+document.getElementById('reset').onclick = () => {
+  try { localStorage.removeItem(KEY); } catch {}
+  state = seedState(); els.forEach((el) => el.remove()); els.clear(); shown = {};
+  setView('board');
+};
+addEventListener('resize', () => { if (view === 'timeline') render(false); });
+
+render(false);
+</script>

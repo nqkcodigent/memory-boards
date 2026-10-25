@@ -98,12 +98,21 @@ export const addMemory = (
 export const moveMemory = (db: SQLiteDatabase, id: number, x: number, y: number) =>
   db.runAsync('UPDATE memories SET x = ?, y = ? WHERE id = ?', x, y, id);
 
+export const updateCaption = (db: SQLiteDatabase, id: number, caption: string) =>
+  db.runAsync('UPDATE memories SET caption = ? WHERE id = ?', caption.trim() || null, id);
+
 export const listConnections = (db: SQLiteDatabase, boardId: number) =>
   db.getAllAsync<Connection>('SELECT * FROM connections WHERE board_id = ?', boardId);
 
 // Dây không có hướng: sắp id nhỏ trước để A→B và B→A trùng UNIQUE, OR IGNORE bỏ qua bản trùng.
-export const addConnection = (db: SQLiteDatabase, boardId: number, a: number, b: number) =>
+export const addConnection = (db: SQLiteDatabase, boardId: number, a: number, b: number, kind: Connection['kind'] = 'manual') =>
   db.runAsync(
-    'INSERT OR IGNORE INTO connections (board_id, from_id, to_id) VALUES (?, ?, ?)',
-    boardId, Math.min(a, b), Math.max(a, b),
+    'INSERT OR IGNORE INTO connections (board_id, from_id, to_id, color, kind) VALUES (?, ?, ?, ?, ?)',
+    boardId, Math.min(a, b), Math.max(a, b), kind === 'manual' ? '#b6403a' : '#d2ad72', kind,
   );
+
+// Chạm hai ảnh đã nối thì gỡ dây, chưa nối thì nối.
+export async function toggleConnection(db: SQLiteDatabase, boardId: number, a: number, b: number) {
+  const r = await db.runAsync('DELETE FROM connections WHERE from_id = ? AND to_id = ?', Math.min(a, b), Math.max(a, b));
+  if (r.changes === 0) await addConnection(db, boardId, a, b);
+}

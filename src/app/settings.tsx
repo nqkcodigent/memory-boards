@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { colors } from '@/lib/theme';
 import { checkConnection, loadConfig, saveConfig } from '@/services/immich';
 
 export default function SettingsScreen() {
@@ -52,7 +53,7 @@ export default function SettingsScreen() {
         secureTextEntry
       />
       <Pressable style={styles.button} onPress={save} disabled={busy} accessibilityRole="button">
-        {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Lưu và kiểm tra</Text>}
+        {busy ? <ActivityIndicator color={colors.ink} /> : <Text style={styles.buttonText}>Lưu và kiểm tra</Text>}
       </Pressable>
       {status && <Text style={styles.status}>{status}</Text>}
     </View>
@@ -60,10 +61,10 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#f3e9d8', padding: 16, gap: 8 },
-  label: { color: '#5a4632', marginTop: 8 },
-  input: { backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 12, minHeight: 44 },
-  button: { backgroundColor: '#8b5e3c', borderRadius: 8, minHeight: 44, justifyContent: 'center', alignItems: 'center', marginTop: 16 },
-  buttonText: { color: '#fff', fontWeight: '600' },
-  status: { marginTop: 12, color: '#3b2a1a' },
+  screen: { flex: 1, backgroundColor: colors.wall, padding: 16, gap: 8 },
+  label: { color: colors.chalkDim, marginTop: 8 },
+  input: { backgroundColor: colors.paper, color: colors.ink, borderRadius: 8, paddingHorizontal: 12, minHeight: 44 },
+  button: { backgroundColor: colors.jute, borderRadius: 8, minHeight: 44, justifyContent: 'center', alignItems: 'center', marginTop: 16 },
+  buttonText: { color: colors.ink, fontWeight: '600' },
+  status: { marginTop: 12, color: colors.chalk },
 });

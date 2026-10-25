@@ -3,6 +3,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { colors, handFont } from '@/lib/theme';
 import { createBoard, deleteBoard, listBoards, type Board } from '@/db/schema';
 
 export default function BoardsScreen() {
@@ -68,14 +69,14 @@ export default function BoardsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#f3e9d8', padding: 16 },
+  screen: { flex: 1, backgroundColor: colors.wall, padding: 16 },
   row: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  input: { flex: 1, backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 12, minHeight: 44 },
-  button: { backgroundColor: '#8b5e3c', borderRadius: 8, paddingHorizontal: 16, justifyContent: 'center' },
-  buttonText: { color: '#fff', fontWeight: '600' },
-  item: { backgroundColor: '#fffdf8', padding: 16, borderRadius: 8, marginBottom: 8 },
-  itemTitle: { fontSize: 17, color: '#3b2a1a', fontWeight: '600' },
-  itemDate: { color: '#8a7560', marginTop: 4 },
-  empty: { textAlign: 'center', color: '#8a7560', marginTop: 32 },
-  link: { color: '#8b5e3c', fontWeight: '600', padding: 8 },
+  input: { flex: 1, backgroundColor: colors.paper, color: colors.ink, borderRadius: 8, paddingHorizontal: 12, minHeight: 44 },
+  button: { backgroundColor: colors.jute, borderRadius: 8, paddingHorizontal: 16, justifyContent: 'center' },
+  buttonText: { color: colors.ink, fontWeight: '600' },
+  item: { backgroundColor: colors.paper, padding: 16, borderRadius: 8, marginBottom: 8 },
+  itemTitle: { fontSize: 22, fontFamily: handFont, color: colors.ink },
+  itemDate: { color: colors.inkDim, marginTop: 4 },
+  empty: { textAlign: 'center', color: colors.chalkDim, marginTop: 32 },
+  link: { color: colors.jute, fontWeight: '600', padding: 8 },
 });

@@ -1,6 +1,6 @@
 // Chạy: npm test (Node 22.18+ tự bỏ type TypeScript).
 import assert from 'node:assert/strict';
-import { CARD_W, ropePath } from './rope.ts';
+import { CARD_W, ropePath, timelineLayout } from './rope.ts';
 
 const nums = (p: string) => p.split(' ').filter((t) => !Number.isNaN(Number(t))).map(Number);
 
@@ -15,5 +15,14 @@ assert.ok(cy > y1, 'dây phải võng xuống');
 // Dây rất dài: độ võng bị giới hạn, không rơi khỏi bảng.
 const [, ly1, , lcy] = nums(ropePath(0, 0, 5000, 0));
 assert.equal(lcy - ly1, 90);
+
+// Dòng thời gian: màn rộng so le hai bên, không ảnh nào tràn ra ngoài.
+const wide = timelineLayout([1, 2, 3], 400);
+assert.ok(wide.pos[1].x < 200 && wide.pos[2].x > 200, 'so le trái/phải');
+assert.ok(wide.pos[1].y < wide.pos[2].y && wide.pos[2].y < wide.pos[3].y, 'đi xuống theo ngày');
+for (const p of Object.values(wide.pos)) assert.ok(p.x >= 0 && p.x + CARD_W <= 400);
+const narrow = timelineLayout([1, 2], 320);
+assert.equal(narrow.pos[1].x, narrow.pos[2].x, 'màn hẹp: một cột');
+assert.equal(timelineLayout([], 400).height > 0, true);
 
 console.log('rope ok');
