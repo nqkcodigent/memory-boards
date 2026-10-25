@@ -40,3 +40,4 @@ npm test
 ## Lưu ý
 
 - Dữ liệu chỉ nằm trên điện thoại. Đổi máy hoặc xoá app thì mất bảng (ảnh gốc vẫn còn trong thư viện).
+# memory-boards
