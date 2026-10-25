@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import {
-  SensorType, useAnimatedSensor, useDerivedValue, useReducedMotion, useSharedValue,
+  SensorType, useAnimatedReaction, useAnimatedSensor, useReducedMotion, useSharedValue,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg from 'react-native-svg';
@@ -45,15 +45,21 @@ function useTilt() {
   const reduceMotion = useReducedMotion();
   const { sensor } = useAnimatedSensor(SensorType.GRAVITY, { interval: 33 });
   const rest = useSharedValue<Tilt | null>(null);
-  return useDerivedValue<Tilt>(() => {
-    const g = sensor.value;
-    if (reduceMotion) return { x: 0, y: 0 };
+  const tilt = useSharedValue<Tilt>({ x: 0, y: 0 });
+  const ios = Platform.OS === 'ios';
+  // Chỉ theo dõi cảm biến; ghi `rest` trong phần theo dõi sẽ tự kích hoạt lại chính nó mãi (treo máy, iOS đóng app).
+  useAnimatedReaction(() => sensor.value, (g) => {
+    // Cảm biến chưa có số liệu đầu tiên thì bỏ qua, kẻo lấy (0, 0) làm mốc rồi ảnh giật khi số liệu thật tới.
+    if (reduceMotion || (g.x === 0 && g.y === 0 && g.z === 0)) return;
     // Đổi về trục màn hình (y hướng xuống): iOS báo trục y hướng lên, Android báo ngược dấu cả hai trục.
-    const s = Platform.OS === 'ios' ? { x: g.x / 9.81, y: -g.y / 9.81 } : { x: -g.x / 9.81, y: g.y / 9.81 };
+    const s = ios ? { x: g.x / 9.81, y: -g.y / 9.81 } : { x: -g.x / 9.81, y: g.y / 9.81 };
     const r = tiltStep(rest.value, s);
     rest.value = r.rest;
-    return r.tilt;
+    // Lệch dưới 0,2px thì bỏ qua: cảm biến rung nhẹ liên tục, đỡ phải vẽ lại mọi ảnh và dây khi để máy yên.
+    const t = tilt.value;
+    if (Math.abs(r.tilt.x - t.x) > 0.02 || Math.abs(r.tilt.y - t.y) > 0.02) tilt.value = r.tilt;
   });
+  return tilt;
 }
 
 export default function BoardScreen() {

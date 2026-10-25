@@ -59,14 +59,11 @@ export function PhotoCard({ memory, positions, tilt, selected, draggable, rotati
   // Kéo và xoay cùng lúc được; chạm chỉ khi không kéo/xoay.
   const gesture = useExclusiveGestures(useSimultaneousGestures(pan, rotate), tap);
 
-  // Ảnh nổi DEPTH px theo hướng nghiêng; bóng nằm trên mặt bần nên lệch ngược lại, trông như ảnh nhấc khỏi bảng.
+  // Ảnh nổi DEPTH px theo hướng nghiêng. Bóng giữ cố định: đổi bóng iOS mỗi khung hình rất tốn.
   const style = useAnimatedStyle(() => {
     const p = positions.value[id] ?? { x: memory.x, y: memory.y };
     const t = tilt.value;
-    return {
-      transform: [{ translateX: p.x + t.x * DEPTH }, { translateY: p.y + t.y * DEPTH }, { rotate: `${angle.value}deg` }],
-      shadowOffset: { width: -t.x * DEPTH, height: 4 - t.y * DEPTH },
-    };
+    return { transform: [{ translateX: p.x + t.x * DEPTH }, { translateY: p.y + t.y * DEPTH }, { rotate: `${angle.value}deg` }] };
   });
 
   const meta = [memory.taken_at && fmtDate(memory.taken_at), memory.place].filter(Boolean).join(' · ');
@@ -102,6 +99,7 @@ const styles = StyleSheet.create({
     shadowColor: '#28190a',
     shadowOpacity: 0.3,
     shadowRadius: 9,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
   selected: { borderWidth: 3, borderColor: colors.yarn },

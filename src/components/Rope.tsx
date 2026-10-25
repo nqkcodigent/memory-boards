@@ -1,5 +1,5 @@
 import Animated, {
-  useAnimatedProps, useAnimatedReaction, useSharedValue, withSpring, type SharedValue,
+  useAnimatedProps, useAnimatedReaction, useDerivedValue, useSharedValue, withSpring, type SharedValue,
 } from 'react-native-reanimated';
 import { Path } from 'react-native-svg';
 
@@ -24,11 +24,12 @@ export function Rope({ positions, tilt, from, to, color }: {
   // shortcut: dây vật lý là một điểm võng gắn lò xo thay vì chuỗi điểm; đủ cho dây ngắn, cần chuỗi khi dây dài quấn quanh ảnh.
   const cx = useSharedValue(0);
   const cy = useSharedValue(0);
+  // Lò xo chỉ khởi động khi hai ảnh của chính dây này dời chỗ, không phải mỗi lần cảm biến báo số.
   useAnimatedReaction(
     () => {
       const a = positions.value[from];
       const b = positions.value[to];
-      return a && b ? ropeEnds(a.x, a.y, b.x, b.y, tilt.value) : null;
+      return a && b ? ropeEnds(a.x, a.y, b.x, b.y) : null;
     },
     (t, prev) => {
       if (!t) return;
@@ -42,18 +43,22 @@ export function Rope({ positions, tilt, from, to, color }: {
     },
   );
 
-  const path = (dx: number, dy: number) => {
-    'worklet';
+  // Tính đường dây một lần cho cả ba lớp: hai đầu nổi theo ảnh, giữa dây nổi ít hơn, bóng nằm yên trên mặt bần.
+  const d = useDerivedValue(() => {
     const a = positions.value[from];
     const b = positions.value[to];
-    if (!a || !b) return { d: '' };
-    const r = ropeEnds(a.x, a.y, b.x, b.y, tilt.value);
-    return { d: `M ${r.x1 + dx} ${r.y1 + dy} Q ${cx.value + dx} ${cy.value + dy} ${r.x2 + dx} ${r.y2 + dy}` };
-  };
-  // Bóng nằm trên mặt bần nên không nổi theo dây: lệch ngược hướng nghiêng.
-  const shadow = useAnimatedProps(() => path(1 - tilt.value.x * DEPTH * 0.6, 4 - tilt.value.y * DEPTH * 0.6));
-  const main = useAnimatedProps(() => path(0, 0));
-  const twist = useAnimatedProps(() => path(0, 0));
+    if (!a || !b) return { main: '', shadow: '' };
+    const r = ropeEnds(a.x, a.y, b.x, b.y);
+    const ox = tilt.value.x * DEPTH;
+    const oy = tilt.value.y * DEPTH;
+    return {
+      main: `M ${r.x1 + ox} ${r.y1 + oy} Q ${cx.value + ox * 0.4} ${cy.value + oy * 0.4} ${r.x2 + ox} ${r.y2 + oy}`,
+      shadow: `M ${r.x1 + 1} ${r.y1 + 4} Q ${cx.value + 1} ${cy.value + 4} ${r.x2 + 1} ${r.y2 + 4}`,
+    };
+  });
+  const shadow = useAnimatedProps(() => ({ d: d.value.shadow }));
+  const main = useAnimatedProps(() => ({ d: d.value.main }));
+  const twist = useAnimatedProps(() => ({ d: d.value.main }));
   return (
     <>
       <AnimatedPath animatedProps={shadow} stroke="rgba(30,15,5,0.22)" strokeWidth={5} fill="none" strokeLinecap="round" />

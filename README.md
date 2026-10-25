@@ -18,7 +18,7 @@ Mở bằng Expo Go trên điện thoại (cùng Wi‑Fi với máy tính). Trê
 - **Chạm** ảnh để ghi chú.
 - **Nối dây**: chạm hai ảnh để nối; chạm lại hai ảnh đã nối để gỡ.
 - **Cách xem**: Bảng (tự kéo thả, xoay ảnh bằng hai ngón), Thời gian (tự xếp theo ngày), Tất cả (album theo tháng).
-- **Chiều sâu**: nghiêng máy thì ảnh và dây nổi lên khỏi mặt bần, bóng đổ lệch theo; dây võng theo trọng lực và đung đưa khi kéo ảnh. Tắt khi bật Giảm chuyển động.
+- **Chiều sâu**: nghiêng máy thì ảnh và dây nổi lên, tách khỏi bóng nằm yên trên mặt bần; dây võng theo trọng lực và đung đưa khi kéo ảnh. Tắt khi bật Giảm chuyển động.
 - Nhấn giữ một bảng ở màn hình đầu để xoá (ảnh gốc trong thư viện không bị xoá).
 
 ## Kiểm tra
