@@ -1,11 +1,14 @@
 import { Image } from 'expo-image';
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { GestureDetector, useTapGesture, usePanGesture, useExclusiveGestures } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
+import {
+  GestureDetector, useExclusiveGestures, usePanGesture, useRotationGesture, useSimultaneousGestures, useTapGesture,
+} from 'react-native-gesture-handler';
+import Animated, { useAnimatedStyle, useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import type { Memory } from '@/db/schema';
-import { CARD_H, CARD_W } from '@/lib/rope';
+import { CARD_H, CARD_W, DEPTH, type Tilt } from '@/lib/rope';
 import { colors, handFont } from '@/lib/theme';
 import { photoUri } from '@/services/photos';
 import type { Positions } from './Rope';
@@ -13,17 +16,22 @@ import type { Positions } from './Rope';
 type Props = {
   memory: Memory;
   positions: SharedValue<Positions>;
+  tilt: SharedValue<Tilt>;
   selected: boolean;
   draggable: boolean;
+  rotation: number;
   onTap: (id: number) => void;
   onMoved: (id: number, x: number, y: number) => void;
+  // Có thì cho xoay ảnh bằng hai ngón (chỉ trên Bảng).
+  onRotated?: (id: number, deg: number) => void;
 };
 
 const fmtDate = (iso: string) => iso.slice(0, 10).split('-').reverse().join('.');
 
-export function PhotoCard({ memory, positions, selected, draggable, onTap, onMoved }: Props) {
+export function PhotoCard({ memory, positions, tilt, selected, draggable, rotation, onTap, onMoved, onRotated }: Props) {
   const id = memory.id;
-  const rotation = draggable ? memory.rotation : 0;
+  const angle = useSharedValue(rotation);
+  useEffect(() => { angle.value = rotation; }, [rotation, angle]);
 
   // Nhấn giữ rồi mới kéo, để vuốt bình thường vẫn cuộn được bảng.
   const pan = usePanGesture({
@@ -43,11 +51,22 @@ export function PhotoCard({ memory, positions, selected, draggable, onTap, onMov
     },
   });
   const tap = useTapGesture({ onDeactivate: (e) => { if (!e.canceled) scheduleOnRN(onTap, id); } });
-  const gesture = useExclusiveGestures(pan, tap);
+  const rotate = useRotationGesture({
+    enabled: onRotated !== undefined,
+    onUpdate: (e) => { angle.value += (e.rotationChange * 180) / Math.PI; },
+    onDeactivate: () => { if (onRotated) scheduleOnRN(onRotated, id, angle.value); },
+  });
+  // Kéo và xoay cùng lúc được; chạm chỉ khi không kéo/xoay.
+  const gesture = useExclusiveGestures(useSimultaneousGestures(pan, rotate), tap);
 
+  // Ảnh nổi DEPTH px theo hướng nghiêng; bóng nằm trên mặt bần nên lệch ngược lại, trông như ảnh nhấc khỏi bảng.
   const style = useAnimatedStyle(() => {
     const p = positions.value[id] ?? { x: memory.x, y: memory.y };
-    return { transform: [{ translateX: p.x }, { translateY: p.y }, { rotate: `${rotation}deg` }] };
+    const t = tilt.value;
+    return {
+      transform: [{ translateX: p.x + t.x * DEPTH }, { translateY: p.y + t.y * DEPTH }, { rotate: `${angle.value}deg` }],
+      shadowOffset: { width: -t.x * DEPTH, height: 4 - t.y * DEPTH },
+    };
   });
 
   const meta = [memory.taken_at && fmtDate(memory.taken_at), memory.place].filter(Boolean).join(' · ');
@@ -61,6 +80,7 @@ export function PhotoCard({ memory, positions, selected, draggable, onTap, onMov
       >
         <View style={styles.pin} />
         <Image source={photoUri(memory.asset_id)} style={styles.photo} contentFit="cover" />
+        {memory.kind === 'video' && <Text style={styles.play}>▶</Text>}
         <Text style={styles.date} numberOfLines={1}>{meta}</Text>
         <Text style={[styles.caption, !memory.caption && styles.placeholder]} numberOfLines={1}>
           {memory.caption || 'Chạm để ghi chú'}
@@ -80,9 +100,8 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
     borderRadius: 2,
     shadowColor: '#28190a',
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 9,
     elevation: 4,
   },
   selected: { borderWidth: 3, borderColor: colors.yarn },
@@ -99,6 +118,10 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   photo: { width: CARD_W - 16, height: CARD_W - 16, backgroundColor: '#e8e0d0' },
+  play: {
+    position: 'absolute', top: 8 + (CARD_W - 16) / 2 - 18, left: CARD_W / 2 - 18, width: 36, height: 36, borderRadius: 18,
+    overflow: 'hidden', textAlign: 'center', lineHeight: 36, fontSize: 16, color: '#fff', backgroundColor: 'rgba(0,0,0,0.45)',
+  },
   date: { marginTop: 3, fontSize: 13, fontFamily: handFont, color: colors.inkDim, textAlign: 'center' },
   caption: { fontSize: 17, fontFamily: handFont, color: colors.ink, textAlign: 'center' },
   placeholder: { color: colors.inkDim, opacity: 0.6 },

@@ -1,6 +1,6 @@
 # memory-board
 
-Bảng kỷ niệm: ghim ảnh lên bảng bần, nối bằng dây. Ảnh chọn từ thư viện ảnh của điện thoại; app giữ một bản thu nhỏ (~600px) cùng vị trí, dây và chú thích trong SQLite trên máy. Không cần server, chạy offline.
+Bảng kỷ niệm: ghim ảnh lên bảng bần, nối bằng dây. Ảnh và video chọn từ thư viện của điện thoại; app giữ ảnh vuông 512px cho bảng và bản gốc (ảnh không nén lại, video 1080p) để xem toàn màn hình, cùng vị trí, dây và chú thích trong SQLite trên máy. Không cần server, chạy offline.
 
 ## Chạy
 
@@ -13,11 +13,12 @@ Mở bằng Expo Go trên điện thoại (cùng Wi‑Fi với máy tính). Trê
 
 ## Cách dùng bảng
 
-- **＋ Ghim ảnh**: chọn tối đa 20 ảnh một lần. Ảnh có ngày chụp sẽ tự nối dây với kỷ niệm ngay trước nó.
+- **＋ Ghim ảnh**: chọn tối đa 20 ảnh hoặc video một lần. Ảnh có ngày chụp sẽ tự nối dây với kỷ niệm ngay trước nó.
 - **Nhấn giữ** ảnh rồi kéo để di chuyển; dây chạy theo.
 - **Chạm** ảnh để ghi chú.
 - **Nối dây**: chạm hai ảnh để nối; chạm lại hai ảnh đã nối để gỡ.
-- **Dòng thời gian**: ảnh tự xếp theo ngày chụp.
+- **Cách xem**: Bảng (tự kéo thả, xoay ảnh bằng hai ngón), Thời gian (tự xếp theo ngày), Tất cả (album theo tháng).
+- **Chiều sâu**: nghiêng máy thì ảnh và dây nổi lên khỏi mặt bần, bóng đổ lệch theo; dây võng theo trọng lực và đung đưa khi kéo ảnh. Tắt khi bật Giảm chuyển động.
 - Nhấn giữ một bảng ở màn hình đầu để xoá (ảnh gốc trong thư viện không bị xoá).
 
 ## Kiểm tra

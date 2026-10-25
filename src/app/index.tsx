@@ -25,7 +25,7 @@ export default function BoardsScreen() {
   }
 
   async function remove(b: Board) {
-    const files = (await listMemories(db, b.id)).map((m) => m.asset_id);
+    const files = (await listMemories(db, b.id)).flatMap((m) => [m.asset_id, m.original]);
     await deleteBoard(db, b.id);
     deletePhotos(files);
     reload();
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.wall, padding: 16 },
   row: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   input: { flex: 1, backgroundColor: colors.paper, color: colors.ink, borderRadius: 8, paddingHorizontal: 12, minHeight: 44 },
-  button: { backgroundColor: colors.jute, borderRadius: 8, paddingHorizontal: 16, justifyContent: 'center' },
+  button: { backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 16, justifyContent: 'center' },
   buttonText: { color: colors.ink, fontWeight: '600' },
   item: { backgroundColor: colors.paper, padding: 16, borderRadius: 8, marginBottom: 8 },
   itemTitle: { fontSize: 22, fontFamily: handFont, color: colors.ink },

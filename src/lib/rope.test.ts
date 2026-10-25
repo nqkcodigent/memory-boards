@@ -1,6 +1,6 @@
 // Chạy: npm test (Node 22.18+ tự bỏ type TypeScript).
 import assert from 'node:assert/strict';
-import { CARD_W, ropePath, timelineLayout } from './rope.ts';
+import { bridgeNeighbors, CARD_W, ropePath, timelineLayout } from './rope.ts';
 
 const nums = (p: string) => p.split(' ').filter((t) => !Number.isNaN(Number(t))).map(Number);
 
@@ -24,5 +24,11 @@ for (const p of Object.values(wide.pos)) assert.ok(p.x >= 0 && p.x + CARD_W <= 4
 const narrow = timelineLayout([1, 2], 320);
 assert.equal(narrow.pos[1].x, narrow.pos[2].x, 'màn hẹp: một cột');
 assert.equal(timelineLayout([], 400).height > 0, true);
+
+// Gỡ ảnh: giữa chuỗi thì nối hai đầu, ở đầu/cuối chuỗi hoặc đứng riêng thì không nối gì.
+assert.deepEqual(bridgeNeighbors([{ from_id: 1, to_id: 2 }, { from_id: 2, to_id: 3 }], 2), [1, 3]);
+assert.equal(bridgeNeighbors([{ from_id: 1, to_id: 2 }], 1), null);
+assert.equal(bridgeNeighbors([], 5), null);
+assert.equal(bridgeNeighbors([{ from_id: 1, to_id: 4 }, { from_id: 2, to_id: 4 }, { from_id: 3, to_id: 4 }], 4), null);
 
 console.log('rope ok');
